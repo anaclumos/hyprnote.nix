@@ -13,6 +13,16 @@
 
         sources = pkgs.callPackage ./_sources/generated.nix { };
 
+        desktopItem = pkgs.makeDesktopItem {
+          name = "hyprnote";
+          desktopName = "Hyprnote";
+          exec = "hyprnote";
+          icon = "hyprnote";
+          comment = "AI notepad for private meetings";
+          categories = [ "Office" "AudioVideo" ];
+          terminal = false;
+        };
+
         hyprnote = pkgs.stdenv.mkDerivation {
           inherit (sources.hyprnote) pname version src;
 
@@ -21,6 +31,7 @@
             autoPatchelfHook
             makeWrapper
             wrapGAppsHook3
+            copyDesktopItems
           ];
 
           buildInputs = with pkgs; [
@@ -41,6 +52,8 @@
             pipewire
           ];
 
+          desktopItems = [ desktopItem ];
+
           unpackPhase = ''
             runHook preUnpack
             dpkg-deb -x $src .
@@ -53,8 +66,8 @@
             mkdir -p $out
             cp -r usr/* $out/
             
-            substituteInPlace $out/share/applications/hyprnote.desktop \
-              --replace '/usr/bin/hyprnote' 'hyprnote'
+            # Remove any existing .desktop file from the deb (we use our own)
+            rm -rf $out/share/applications
             
             runHook postInstall
           '';
