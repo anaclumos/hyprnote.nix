@@ -24,6 +24,8 @@
 
           extraPkgs = pkgs: with pkgs; [
             libayatana-appindicator
+            mesa
+            libGL
           ];
         };
 
