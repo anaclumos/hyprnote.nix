@@ -21,6 +21,10 @@
 
         wrappedApp = pkgs.appimageTools.wrapType2 {
           inherit pname version src;
+
+          extraPkgs = pkgs: with pkgs; [
+            libayatana-appindicator
+          ];
         };
 
         desktopItem = pkgs.makeDesktopItem {
