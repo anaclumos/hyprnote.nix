@@ -10,75 +10,55 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         pkgs = import nixpkgs { inherit system; };
-
         sources = pkgs.callPackage ./_sources/generated.nix { };
 
+        pname = "hyprnote";
+        inherit (sources.hyprnote) version src;
+
+        appimageContents = pkgs.appimageTools.extractType2 {
+          inherit pname version src;
+        };
+
+        wrappedApp = pkgs.appimageTools.wrapType2 {
+          inherit pname version src;
+        };
+
         desktopItem = pkgs.makeDesktopItem {
-          name = "hyprnote";
+          name = pname;
           desktopName = "Hyprnote";
-          exec = "hyprnote";
-          icon = "hyprnote";
+          exec = pname;
+          icon = "hyprnote-nightly";
           comment = "AI notepad for private meetings";
           categories = [ "Office" "AudioVideo" ];
           terminal = false;
+          mimeTypes = [ "x-scheme-handler/hyprnote-nightly" ];
         };
 
-        hyprnote = pkgs.stdenv.mkDerivation {
-          inherit (sources.hyprnote) pname version src;
+        icons = pkgs.linkFarm "${pname}-icons" [
+          {
+            name = "share/icons/hicolor/32x32/apps/hyprnote-nightly.png";
+            path = "${appimageContents}/usr/share/icons/hicolor/32x32/apps/hyprnote-nightly.png";
+          }
+          {
+            name = "share/icons/hicolor/128x128/apps/hyprnote-nightly.png";
+            path = "${appimageContents}/usr/share/icons/hicolor/128x128/apps/hyprnote-nightly.png";
+          }
+          {
+            name = "share/icons/hicolor/256x256/apps/hyprnote-nightly.png";
+            path = "${appimageContents}/usr/share/icons/hicolor/256x256@2/apps/hyprnote-nightly.png";
+          }
+        ];
 
-          nativeBuildInputs = with pkgs; [
-            dpkg
-            autoPatchelfHook
-            makeWrapper
-            wrapGAppsHook3
-            copyDesktopItems
-          ];
-
-          buildInputs = with pkgs; [
-            glib
-            gtk3
-            webkitgtk_4_1
-            openssl
-            libsoup_3
-            alsa-lib
-            libappindicator-gtk3
-            librsvg
-            gdk-pixbuf
-          ];
-
-          runtimeDependencies = with pkgs; [
-            systemd
-            pulseaudio
-            pipewire
-          ];
-
-          desktopItems = [ desktopItem ];
-
-          unpackPhase = ''
-            runHook preUnpack
-            dpkg-deb -x $src .
-            runHook postUnpack
-          '';
-
-          installPhase = ''
-            runHook preInstall
-            
-            mkdir -p $out
-            cp -r usr/* $out/
-            
-            # Remove any existing .desktop file from the deb (we use our own)
-            rm -rf $out/share/applications
-            
-            runHook postInstall
-          '';
+        hyprnote = pkgs.symlinkJoin {
+          name = "${pname}-${version}";
+          paths = [ wrappedApp desktopItem icons ];
 
           meta = with pkgs.lib; {
             description = "AI notepad for private meetings - local-first with on-device transcription";
             homepage = "https://hyprnote.com";
-            license = licenses.agpl3Only;
+            license = licenses.gpl3Only;
             platforms = [ "x86_64-linux" ];
-            mainProgram = "hyprnote";
-            maintainers = [ ];
+            mainProgram = pname;
           };
         };
 
@@ -90,10 +70,6 @@
 
         apps.default = flake-utils.lib.mkApp {
           drv = hyprnote;
-        };
-
-        overlays.default = final: prev: {
-          inherit hyprnote;
         };
       }
     ) // {
