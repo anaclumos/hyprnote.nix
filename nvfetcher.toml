@@ -1,4 +1,4 @@
 [hyprnote]
 src.github = "fastrepl/hyprnote"
 src.prefix = "desktop_v"
-fetch.url = "https://github.com/fastrepl/hyprnote/releases/download/desktop_v$ver/hyprnote-linux-x86_64.AppImage"
+fetch.url = "https://github.com/fastrepl/hyprnote/releases/download/desktop_v$ver/hyprnote-linux-x86_64.deb"

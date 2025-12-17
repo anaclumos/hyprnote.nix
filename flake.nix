@@ -10,61 +10,94 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        inherit (pkgs) lib stdenv;
         sources = pkgs.callPackage ./_sources/generated.nix { };
 
         pname = "hyprnote";
         inherit (sources.hyprnote) version src;
 
-        appimageContents = pkgs.appimageTools.extractType2 {
-          inherit pname version src;
+        # Extract .deb contents
+        extracted = stdenv.mkDerivation {
+          name = "${pname}-extracted-${version}";
+          inherit src;
+          nativeBuildInputs = [ pkgs.dpkg ];
+          unpackPhase = "dpkg-deb -x $src .";
+          installPhase = "cp -r . $out";
         };
 
-        wrappedApp = pkgs.appimageTools.wrapType2 {
-          inherit pname version src;
+        hyprnote = stdenv.mkDerivation {
+          inherit pname version;
 
-          extraPkgs = pkgs: with pkgs; [
-            libayatana-appindicator
-            mesa
-            libGL
+          src = extracted;
+
+          nativeBuildInputs = with pkgs; [
+            autoPatchelfHook
+            makeWrapper
+            copyDesktopItems
           ];
-        };
 
-        desktopItem = pkgs.makeDesktopItem {
-          name = pname;
-          desktopName = "Hyprnote";
-          exec = pname;
-          icon = "hyprnote-nightly";
-          comment = "AI notepad for private meetings";
-          categories = [ "Office" "AudioVideo" ];
-          terminal = false;
-          mimeTypes = [ "x-scheme-handler/hyprnote-nightly" ];
-        };
+          buildInputs = with pkgs; [
+            glib
+            gtk3
+            webkitgtk_4_1
+            openssl
+            libsoup_3
+            alsa-lib
+            libayatana-appindicator
+            librsvg
+            gdk-pixbuf
+          ];
 
-        icons = pkgs.linkFarm "${pname}-icons" [
-          {
-            name = "share/icons/hicolor/32x32/apps/hyprnote-nightly.png";
-            path = "${appimageContents}/usr/share/icons/hicolor/32x32/apps/hyprnote-nightly.png";
-          }
-          {
-            name = "share/icons/hicolor/128x128/apps/hyprnote-nightly.png";
-            path = "${appimageContents}/usr/share/icons/hicolor/128x128/apps/hyprnote-nightly.png";
-          }
-          {
-            name = "share/icons/hicolor/256x256/apps/hyprnote-nightly.png";
-            path = "${appimageContents}/usr/share/icons/hicolor/256x256@2/apps/hyprnote-nightly.png";
-          }
-        ];
+          runtimeDependencies = with pkgs; [
+            systemd
+            libayatana-appindicator
+          ];
 
-        hyprnote = pkgs.symlinkJoin {
-          name = "${pname}-${version}";
-          paths = [ wrappedApp desktopItem icons ];
+          desktopItems = [
+            (pkgs.makeDesktopItem {
+              name = "hyprnote-nightly";
+              desktopName = "Hyprnote Nightly";
+              exec = "hyprnote-nightly %U";
+              icon = "hyprnote-nightly";
+              terminal = false;
+              categories = [ "Office" "Utility" ];
+              mimeTypes = [ "x-scheme-handler/hyprnote" ];
+            })
+          ];
 
-          meta = with pkgs.lib; {
+          dontConfigure = true;
+          dontBuild = true;
+
+          installPhase =
+            let
+              icons = {
+                "32x32" = "32x32";
+                "128x128" = "128x128";
+                "256x256@2" = "256x256";
+              };
+              installIcon = srcSize: destSize: ''
+                install -Dm644 \
+                  "$src/usr/share/icons/hicolor/${srcSize}/apps/Hyprnote Nightly.png" \
+                  "$out/share/icons/hicolor/${destSize}/apps/hyprnote-nightly.png"
+              '';
+            in ''
+              runHook preInstall
+              install -Dm755 "$src/usr/bin/Hyprnote Nightly" "$out/bin/.hyprnote-nightly-unwrapped"
+              ${lib.concatStringsSep "\n" (lib.mapAttrsToList installIcon icons)}
+              runHook postInstall
+            '';
+
+          postFixup = ''
+            makeWrapper "$out/bin/.hyprnote-nightly-unwrapped" "$out/bin/hyprnote-nightly" \
+              --prefix PATH : ${lib.makeBinPath [ pkgs.desktop-file-utils ]}
+          '';
+
+          meta = {
             description = "AI notepad for private meetings - local-first with on-device transcription";
             homepage = "https://hyprnote.com";
-            license = licenses.gpl3Only;
+            license = lib.licenses.gpl3Only;
             platforms = [ "x86_64-linux" ];
-            mainProgram = pname;
+            mainProgram = "hyprnote-nightly";
           };
         };
 
