@@ -1,0 +1,17 @@
+{
+    "hyprnote": {
+        "cargoLocks": null,
+        "date": null,
+        "extract": null,
+        "name": "hyprnote",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "name": null,
+            "sha256": "sha256-TSfoI+0HyUJMcJohRKg/SQfop9SXP4wdCRR5Bevv6z8=",
+            "type": "url",
+            "url": "https://github.com/fastrepl/hyprnote/releases/download/desktop_v1.0.0-nightly.21/hyprnote-linux-x86_64.deb"
+        },
+        "version": "1.0.0-nightly.21"
+    }
+}
