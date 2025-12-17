@@ -2,7 +2,7 @@
 
 Nix flake packaging for [Hyprnote](https://hyprnote.com), an AI notepad for private meetings (local-first with on-device transcription).
 
-This flake packages the official `.deb` release for `x86_64-linux`.
+This flake packages the official AppImage release for `x86_64-linux`.
 
 ## Installation
 
